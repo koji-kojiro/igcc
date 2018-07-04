@@ -59,7 +59,7 @@ function prompt-exit () {
   local response
   read -r -p "Do you really want to exit ([y]/n)? " response
   if [ "$response" = "y" -o -z "$response" ]; then
-    exit
+    exit 0
   fi
 }
 
@@ -114,7 +114,37 @@ function main-loop () {
   done
 }
 
+function show-help-and-exit () {
+  cat << EOS
+Usage: $0 [options]
+Options:
+  -h	show this help and exit.
+  -v	show version info and exit.
+EOS
+  exit 1
+}
+
+function show-version-and-exit () {
+  echo $0 $version
+  exit 1
+}
+
 function main () {
+  local opt
+  while getopts vh opt; do
+    case $opt in
+      v) show-version-and-exit
+        ;;
+      h) show-help-and-exit
+        ;;
+      \?) show-help-and-exit
+        ;;
+    esac
+  done
+  if [ $# -gt 0 ]; then
+    show-help-and-exit
+  fi
+  shift $((OPTIND - 1))
   main-loop
 }
 
