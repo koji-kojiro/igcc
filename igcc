@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# igcc - Yet another interactive shell for C development
+# Copyright (C) 2018 TANI Kojiro <kojiro0531@gmail.com>
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+readonly version="0.0.1"
+readonly copy="(C) 2018 TANI Kojiro <kojiro0531@gmail.com>"
+prompt=">>> "
+lines=()
+count=0
+
+readonly runtime="\
+#include <stdio.h>
+#define __fmt_string(v) _Generic((v),\\
+  char*:\"[string] %s\",\\
+  char:\"[char] %c\",\\
+  int:\"[int] %d\",\\
+  long:\"[long] %ld\",\\
+  float:\"[float] %f\",\\
+  double:\"[double] %f\",\\
+  unsigned int:\"[unsigned int] %u\",\\
+  unsigned long:\"[unsigned long] %lu\",\\
+  default:\"[unknown type] %p\")
+
+#define __print(v)\\
+  do { printf(__fmt_string(v), v), putchar('\n'); } while (0)
+"
+
+readonly template="\
+#define __code %s
+int main (void)
+{
+#ifdef PRINT
+  __print(({__code}));
+#else
+  __code
+#endif
+  return 0;
+}
+"
+
+function show-info () {
+  printf "$version\n$copy\n\n"
+}
+
+function prompt-exit () {
+  local response
+  read -r -p "Do you really want to exit ([y]/n)? " response
+  if [ "$response" = "y" -o -z "$response" ]; then
+    exit
+  fi
+}
+
+function add-semicolon-if-needed () {
+  if [[ "${1: -1}" = ";" ]]; then
+    echo "$1"
+  else
+    echo "$1;"
+  fi
+}
+
+function create-source () {
+  local i
+  local body="freopen(\"/dev/null\", \"w\", stdout);"
+  for ((i = 0; i < $count - 1; i++)); do
+    body+="({$(add-semicolon-if-needed ${lines[i]})"
+  done
+  body+="({freopen(\"/dev/tty\", \"w\", stdout);\
+    $(add-semicolon-if-needed ${lines[i]})\
+    $(printf "});%.0s" ${lines[@]})"
+  printf "%s$template\n" "$runtime" "$body"
+}
+
+function compile-and-run () { 
+  local src=$(mktemp)
+  local bin=$(mktemp)
+  local successp=0
+  create-source > $src
+  gcc -xc $src -o $bin -DPRINT >/dev/null 2>&1 || \
+  gcc -xc $src -o $bin >/dev/null 2>&1
+  if [ -x $bin ]; then
+    $bin
+  else
+    echo "failed to compile."
+  fi
+  rm -f $src $bin
+}
+
+function main-loop () {
+  local line
+  while true; do
+    IFS= read -er -p "$prompt" line
+    if [ -z "$line" ]; then
+      prompt-exit
+    else
+      IFS= lines+=("$line")
+      let count++
+      compile-and-run
+    fi
+  done
+}
+
+function main () {
+  main-loop
+}
+
+main $@
