@@ -145,6 +145,9 @@ function main () {
     show-help-and-exit
   fi
   shift $((OPTIND - 1))
+  if [ $# -gt 1 ]; then
+    show-help-and-exit
+  fi
   main-loop
 }
 
