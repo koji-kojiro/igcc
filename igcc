@@ -94,6 +94,8 @@ function compile-and-run () {
     $bin
   else
     echo "failed to compile."
+    let count--
+    lines=(${lines[@]:0:$count})
   fi
   rm -f $src $bin
 }
