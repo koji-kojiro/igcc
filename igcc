@@ -20,9 +20,10 @@ readonly copy="(C) 2018 TANI Kojiro <kojiro0531@gmail.com>"
 prompt=">>> "
 lines=()
 count=0
+libs=()
+headers=(stdio.h)
 
 readonly runtime="\
-#include <stdio.h>
 #define __fmt_string(v) _Generic((v),\\
   char*:\"[string] %s\",\\
   char:\"[char] %c\",\\
@@ -80,7 +81,13 @@ function create-source () {
   body+="({freopen(\"/dev/tty\", \"w\", stdout);\
     $(add-semicolon-if-needed ${lines[i]})\
     $(printf "});%.0s" ${lines[@]})"
-  printf "%s$template\n" "$runtime" "$body"
+  local include
+  local header
+  for header in ${headers[@]}; do
+    include+="#include \"$header\"\n"
+  done
+  IFS= include="$(printf "$include")"
+  printf "%s\n%s\n$template\n" $include "$runtime" "$body"
 }
 
 function compile-and-run () { 
@@ -88,8 +95,8 @@ function compile-and-run () {
   local bin=$(mktemp)
   local successp=0
   create-source > $src
-  gcc -xc $src -o $bin -DPRINT >/dev/null 2>&1 || \
-  gcc -xc $src -o $bin >/dev/null 2>&1
+  gcc -xc $src -o $bin -DPRINT ${libs[@]} >/dev/null 2>&1 || \
+  gcc -xc $src -o $bin ${libs[@]} >/dev/null 2>&1
   if [ -x $bin ]; then
     $bin
   else
@@ -100,12 +107,66 @@ function compile-and-run () {
   rm -f $src $bin
 }
 
+function command-help () {
+  cat << EOS
+    :exit               exit $0.
+    :help               show this help.
+    :include <header>   add header file.
+    :lib <library>      add shared library to be linked.
+EOS
+}
+
+function command-include () {
+  local header=$2
+  if [ -z $header ]; then
+    echo "(${headers[@]})"
+  else
+    if [ -z $(echo "${headers[@]}" | grep -o $header) ]; then
+      if [ -z $(echo \#include \"$header\" |\
+              gcc -xc - 2>&1 | grep -o $header) ]; then
+        headers+=("$header")
+      else
+        echo "could not find \`$header\`."
+      fi
+    fi
+    echo "(${headers[@]})"
+  fi
+}
+
+function command-lib () {
+  local lib=$2
+  if [ -z $lib ]; then
+    echo "(${libs[@]})"
+  else
+    if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
+      if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
+        echo "could not find \`lib$lib.so\`."
+      else
+        libs+=("-l$lib")
+      fi
+    fi
+    echo "(${libs[@]})"
+  fi
+}
+
 function main-loop () {
   local line
   while true; do
     IFS= read -er -p "$prompt" line
     if [ -z "$line" ]; then
       prompt-exit
+    elif [ "$line" = ":exit" ]; then
+      exit 0
+    elif [ "$line" = ":help" ]; then
+      command-help
+    elif [[ $line = :include\ * ]]; then
+      command-include $line
+    elif [[ $line = :lib\ * ]]; then
+      command-lib $line
+    elif [[ $line = :* ]]; then
+      echo "invalid command. try \`:help\`."
+    elif [[ $line = \#* ]]; then
+      echo "cpp directive is not allowed. \`try :help\`."
     else
       IFS= lines+=("$line")
       let count++
