@@ -99,12 +99,13 @@ function create-source () {
 }
 
 function compile-and-run () { 
-  local src=$(mktemp)
   local bin=$(mktemp)
   local result
-  create-source > $src
-  gcc -xc -std=$std $src -o $bin -DPRINT -DCOUNT=$count ${libs[@]} >/dev/null 2>&1 || \
-  gcc -xc -std=$std $src -o $bin -DCOUNT=$count ${libs[@]} >/dev/null 2>&1
+  local src="$(create-source)"
+  echo $src | gcc -xc -std=$std -o $bin -DPRINT \
+    -DCOUNT=$count ${libs[@]} - >/dev/null 2>&1 || \
+  echo $src | gcc -xc -std=$std -o $bin \
+    -DCOUNT=$count ${libs[@]} - >/dev/null 2>&1
   if [ -x $bin ]; then
     result=$($bin || echo failed)
     if [ ! -z "$result" ]; then
@@ -117,7 +118,7 @@ function compile-and-run () {
     lines=(${lines[@]:0:$count})
     print-error "Failed to compile."
   fi
-  rm -f $src $bin
+  rm -f $bin
 }
 
 function command-help () {
