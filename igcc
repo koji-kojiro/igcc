@@ -59,6 +59,10 @@ function print-error() {
   printf "\e[31mError:$1\e[m\n"
 }
 
+function print-success() {
+  printf "\e[34m$1\e[m\n"
+}
+
 function prompt() {
   printf "\e[35m$std\e[32m@\e[33m($prog)\e[32m> \e[m"
 }
@@ -94,7 +98,7 @@ function create-source () {
   for header in ${headers[@]}; do
     include+="#include \"$header\"\n"
   done
-  IFS= include="$(printf "$include")"
+  include="$(IFS= printf "$include")"
   printf "%s\n%s\n$template\n" $include "$runtime" "$body"
 }
 
@@ -127,13 +131,15 @@ function command-help () {
     :help               show this help.
     :include <header>   add header file.
     :lib <library>      add shared library to be linked.
+    :load <file>        restore enviroment from <file>.
+    :save <file>        save current environment into <file>.      
 EOS
 }
 
 function command-include () {
   local header=$2
   if [ -z $header ]; then
-    echo "(${headers[@]})"
+    print-success "(${headers[@]})"
   else
     if [ -z $(echo "${headers[@]}" | grep -o $header) ]; then
       if [ -z $(echo \#include \"$header\" |\
@@ -143,14 +149,14 @@ function command-include () {
         print-error "Could not find \`$header\`."
       fi
     fi
-    echo "(${headers[@]})"
+    print-success "(${headers[@]})"
   fi
 }
 
 function command-lib () {
   local lib=$2
   if [ -z $lib ]; then
-    echo "(${libs[@]})"
+    print-success "(${libs[@]})"
   else
     if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
       if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
@@ -159,7 +165,35 @@ function command-lib () {
         libs+=("-l$lib")
       fi
     fi
-    echo "(${libs[@]})"
+    print-success "(${libs[@]})"
+  fi
+}
+
+function command-load () {
+  local file=$2
+  if [ -z $file ]; then
+    print-error "Missing filename."
+  else
+    if source $(realpath $file) >/dev/null 2>&1; then
+      print-success "Loaded.:\`$file\`"
+    else
+      print-error "Failed to load from \`$file\`."
+    fi
+  fi
+}
+
+function command-save () {
+  local file=$2
+  if [ -z $file ]; then
+    print-error "Missing filename."
+  else
+    cat << EOS > $file
+lib=(${libs[@]})
+headers=(${headers[@]})
+lines=($(printf "\"%s\" " "${lines[@]}"))
+count=$count
+EOS
+   print-success "Wrote into \`$file\`."
   fi
 }
 
@@ -178,14 +212,20 @@ function main-loop () {
       command-include $line
     elif [[ $line = :lib\ * ]]; then
       command-lib $line
+    elif [[ $line = :load\ * ]]; then
+      command-load $line
+    elif [[ $line = :save\ * ]]; then
+      command-save $line
     elif [[ $line = :* ]]; then
-      print-error "Invalid command. try \`:help\`."
+      print-error "Invalid command or missing arguments. try \`:help\`."
     elif [[ $line = \#* ]]; then
       print-error "CPP directive is not allowed. \`try :help\`."
     else
+      local _IFS="$IFS"
       IFS= lines+=("$line")
       let count++
       compile-and-run
+      IFS="$_IFS"
     fi
     echo
   done
