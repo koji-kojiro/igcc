@@ -167,6 +167,7 @@ function main-loop () {
   local line
   while true; do
     IFS= read -er -p "$(prompt)" line
+    history -s "$line"
     if [ -z "$line" ]; then
       exit-with-prompt
     elif [ "$line" = ":exit" ]; then
