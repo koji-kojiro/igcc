@@ -17,26 +17,26 @@
  
 readonly version="0.0.1"
 readonly copy="(C) 2018 TANI Kojiro <kojiro0531@gmail.com>"
-prompt=">>> "
+
 lines=()
 count=0
 libs=()
 headers=(stdio.h)
+prog=$(basename $0)
 
 readonly runtime="\
 #define __fmt_string(v) _Generic((v),\\
-  char*:\"[string] %s\",\\
-  char:\"[char] %c\",\\
-  int:\"[int] %d\",\\
-  long:\"[long] %ld\",\\
-  float:\"[float] %f\",\\
-  double:\"[double] %f\",\\
-  unsigned int:\"[unsigned int] %u\",\\
-  unsigned long:\"[unsigned long] %lu\",\\
-  default:\"[unknown type] %p\")
+  char*:\"\\x1b[34m\$%d\\x1b[0m = (string)\\\"%s\\\"\\n\",\\
+  char:\"\\x1b[34m\$%d\\x1b[0m = (char)\\'%c\\'\\n\",\\
+  int:\"\\x1b[34m\$%d\\x1b[0m = (int)%d\\n\",\\
+  long:\"\\x1b[34m\$%d\\x1b[0m = (long)%ld\\n\",\\
+  float:\"\\x1b[34m\$%d\\x1b[0m = (float)%f\\n\",\\
+  double:\"\\x1b[34m\$%d\\x1b[0m = (double)%f\\n\",\\
+  unsigned int:\"\\x1b[34m\$%d\\x1b[0m = (unsigned int)%u\\n\",\\
+  unsigned long:\"\\x1b[34m\$%d\\x1b[0m = (unsigned long)%lu\\n\",\\
+  default:\"\\x1b[34m\$%d\\x1b[0m = (unknown type)%p\\n\")
 
-#define __print(v)\\
-  do { printf(__fmt_string(v), v), putchar('\n'); } while (0)
+#define __print(v) printf(__fmt_string(v), COUNT, v)
 "
 
 readonly template="\
@@ -47,13 +47,18 @@ int main (void)
   __print(({__code}));
 #else
   __code
+  printf(\"\\x1b[34m\$%d\\x1b[0m = (void)\\\\n\", COUNT);
 #endif
   return 0;
 }
 "
 
-function show-info () {
-  printf "$version\n$copy\n\n"
+function print-error() {
+  printf "\e[31mError:$1\e[m\n"
+}
+
+function prompt() {
+  printf "\e[33m($prog) \e[m"
 }
 
 function prompt-exit () {
@@ -93,23 +98,29 @@ function create-source () {
 function compile-and-run () { 
   local src=$(mktemp)
   local bin=$(mktemp)
-  local successp=0
+  local result
   create-source > $src
-  gcc -xc $src -o $bin -DPRINT ${libs[@]} >/dev/null 2>&1 || \
-  gcc -xc $src -o $bin ${libs[@]} >/dev/null 2>&1
+  gcc -xc $src -o $bin -DPRINT -DCOUNT=$count ${libs[@]} >/dev/null 2>&1 || \
+  gcc -xc $src -o $bin -DCOUNT=$count ${libs[@]} >/dev/null 2>&1
   if [ -x $bin ]; then
-    $bin
-  else
-    echo "failed to compile."
+    result=$($bin || echo failed)
+    if [ ! -z "$result" ]; then
+      let count--
+      lines="(${lines[@]:0:$count})"
+      print-error "Segmentation fault."
+    fi
+ else
     let count--
     lines=(${lines[@]:0:$count})
+    print-error "Failed to compile."
   fi
+  echo
   rm -f $src $bin
 }
 
 function command-help () {
   cat << EOS
-    :exit               exit $0.
+    :exit               exit $prog.
     :help               show this help.
     :include <header>   add header file.
     :lib <library>      add shared library to be linked.
@@ -126,7 +137,7 @@ function command-include () {
               gcc -xc - 2>&1 | grep -o $header) ]; then
         headers+=("$header")
       else
-        echo "could not find \`$header\`."
+        print-error "Could not find \`$header\`."
       fi
     fi
     echo "(${headers[@]})"
@@ -140,7 +151,7 @@ function command-lib () {
   else
     if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
       if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
-        echo "could not find \`lib$lib.so\`."
+        print-error "Could not find \`lib$lib.so\`."
       else
         libs+=("-l$lib")
       fi
@@ -152,7 +163,7 @@ function command-lib () {
 function main-loop () {
   local line
   while true; do
-    IFS= read -er -p "$prompt" line
+    IFS= read -er -p "$(prompt)" line
     if [ -z "$line" ]; then
       prompt-exit
     elif [ "$line" = ":exit" ]; then
@@ -164,9 +175,9 @@ function main-loop () {
     elif [[ $line = :lib\ * ]]; then
       command-lib $line
     elif [[ $line = :* ]]; then
-      echo "invalid command. try \`:help\`."
+      print-error "Invalid command. try \`:help\`."
     elif [[ $line = \#* ]]; then
-      echo "cpp directive is not allowed. \`try :help\`."
+      print-error "CPP directive is not allowed. \`try :help\`."
     else
       IFS= lines+=("$line")
       let count++
@@ -177,7 +188,7 @@ function main-loop () {
 
 function show-help-and-exit () {
   cat << EOS
-Usage: $0 [options]
+Usage: $prog [options]
 Options:
   -h	show this help and exit.
   -v	show version info and exit.
@@ -186,7 +197,7 @@ EOS
 }
 
 function show-version-and-exit () {
-  echo $0 $version
+  echo $prog $version
   exit 1
 }
 
