@@ -1,4 +1,4 @@
-# ***Worning; WIP!***
+# ***Warning; WIP!***
 The software is still pre-alpha quality. Use at your own risks.
 
 # igcc - yet another interactive shell for C development
