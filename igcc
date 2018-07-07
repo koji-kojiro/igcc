@@ -21,6 +21,7 @@ readonly copy="(C) 2018 TANI Kojiro <kojiro0531@gmail.com>"
 lines=()
 count=0
 libs=()
+std=gnu11
 headers=(stdio.h)
 prog=$(basename $0)
 
@@ -58,11 +59,12 @@ function print-error() {
 }
 
 function prompt() {
-  printf "\e[33m($prog) \e[m"
+  printf "\e[35m$std\e[32m@\e[33m($prog)\e[32m> \e[m"
 }
 
-function prompt-exit () {
+function exit-with-prompt () {
   local response
+  echo
   read -r -p "Do you really want to exit ([y]/n)? " response
   if [ "$response" = "y" -o -z "$response" ]; then
     exit 0
@@ -100,8 +102,8 @@ function compile-and-run () {
   local bin=$(mktemp)
   local result
   create-source > $src
-  gcc -xc $src -o $bin -DPRINT -DCOUNT=$count ${libs[@]} >/dev/null 2>&1 || \
-  gcc -xc $src -o $bin -DCOUNT=$count ${libs[@]} >/dev/null 2>&1
+  gcc -xc -std=$std $src -o $bin -DPRINT -DCOUNT=$count ${libs[@]} >/dev/null 2>&1 || \
+  gcc -xc -std=$std $src -o $bin -DCOUNT=$count ${libs[@]} >/dev/null 2>&1
   if [ -x $bin ]; then
     result=$($bin || echo failed)
     if [ ! -z "$result" ]; then
@@ -114,7 +116,6 @@ function compile-and-run () {
     lines=(${lines[@]:0:$count})
     print-error "Failed to compile."
   fi
-  echo
   rm -f $src $bin
 }
 
@@ -165,7 +166,7 @@ function main-loop () {
   while true; do
     IFS= read -er -p "$(prompt)" line
     if [ -z "$line" ]; then
-      prompt-exit
+      exit-with-prompt
     elif [ "$line" = ":exit" ]; then
       exit 0
     elif [ "$line" = ":help" ]; then
@@ -183,6 +184,7 @@ function main-loop () {
       let count++
       compile-and-run
     fi
+    echo
   done
 }
 
@@ -220,6 +222,12 @@ function main () {
   if [ $# -gt 1 ]; then
     show-help-and-exit
   fi
+  cat << EOS
+$prog $version - yet another interactive shell for C
+$copy
+try \`:help\` to get help. Ctrl-D to exit.
+
+EOS
   main-loop
 }
 
