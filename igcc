@@ -22,6 +22,7 @@ lines=()
 count=0
 libs=()
 std=gnu11
+gccversion=$(gcc --version | grep ^gcc)
 headers=(stdio.h)
 prog=$(basename $0)
 
@@ -223,7 +224,7 @@ function main () {
     show-help-and-exit
   fi
   cat << EOS
-$prog $version - yet another interactive shell for C
+$prog $version with $gccversion
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
 
