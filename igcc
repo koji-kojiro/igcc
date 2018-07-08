@@ -139,7 +139,7 @@ EOS
 function command-include () {
   local header=$2
   if [ -z $header ]; then
-    print-success "(${headers[@]})"
+    print-success "(${headers[*]})"
   else
     if [ -z $(echo "${headers[@]}" | grep -o $header) ]; then
       if [ -z $(echo \#include \"$header\" |\
@@ -149,14 +149,14 @@ function command-include () {
         print-error "Could not find \`$header\`."
       fi
     fi
-    print-success "(${headers[@]})"
+    print-success "(${headers[*]})"
   fi
 }
 
 function command-lib () {
   local lib=$2
   if [ -z $lib ]; then
-    print-success "(${libs[@]})"
+    IFS= print-success "(${libs[*]})"
   else
     if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
       if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
@@ -165,7 +165,7 @@ function command-lib () {
         libs+=("-l$lib")
       fi
     fi
-    print-success "(${libs[@]})"
+    IFS= print-success "(${libs[*]})"
   fi
 }
 
