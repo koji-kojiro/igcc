@@ -49,7 +49,7 @@ int main (void)
   __print(({__code}));
 #else
   __code
-  printf(\"\\x1b[34m\$%d\\x1b[0m = (void)\\\\n\", COUNT);
+  printf(\"\\x1b[34m\$%%d\\x1b[0m = (void)\\\\n\", COUNT);
 #endif
   return 0;
 }
