@@ -106,10 +106,12 @@ function compile-and-run () {
   local bin=$(mktemp)
   local result
   local src="$(create-source)"
-  echo $src | gcc -xc -std=$std -o $bin -DPRINT \
-    -DCOUNT=$count ${libs[@]} - >/dev/null 2>&1 || \
-  echo $src | gcc -xc -std=$std -o $bin \
-    -DCOUNT=$count ${libs[@]} - >/dev/null 2>&1
+  local output="$(\
+    echo $src | gcc -xc -std=$std -o $bin -DPRINT \
+      -DCOUNT=$count ${libs[@]} - 2>&1 || \
+    echo $src | gcc -xc -std=$std -o $bin \
+      -DCOUNT=$count ${libs[@]} - 2>&1)"
+   
   if [ -x $bin ]; then
     result=$($bin || echo failed)
     if [ ! -z "$result" ]; then
@@ -120,7 +122,8 @@ function compile-and-run () {
  else
     let count--
     lines=(${lines[@]:0:$count})
-    print-error "Failed to compile."
+    print-success "$(echo $output | grep -E error: | sort -u)"
+    print-error "Failed to compile.:"
   fi
   rm -f $bin
 }
