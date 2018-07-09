@@ -127,6 +127,7 @@ function compile-and-run () {
 
 function command-help () {
   cat << EOS
+    :edit               invoke ${EDITOR:-editor}.
     :exit               exit $prog.
     :help               show this help.
     :include <header>   add header file.
@@ -134,6 +135,20 @@ function command-help () {
     :load <file>        restore enviroment from <file>.
     :save <file>        save current environment into <file>.      
 EOS
+}
+
+function command-edit () {
+  local file=$(mktemp)
+  $EDITOR $file
+  local content="$(cat $file)"
+  rm -f $file
+  if [ -z "$content" ]; then
+    print-error "Nothing to compile."
+  else
+    lines+=("$(echo $content)")
+    let count++
+    IFS= compile-and-run
+  fi
 }
 
 function command-include () {
@@ -204,6 +219,8 @@ function main-loop () {
     history -s "$line"
     if [ -z "$line" ]; then
       exit-with-prompt
+    elif [ "$line" = ":edit" ]; then
+      command-edit
     elif [ "$line" = ":exit" ]; then
       exit 0
     elif [ "$line" = ":help" ]; then
