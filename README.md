@@ -19,7 +19,7 @@ Its features and limitations are listed below:
 **Limitations**
 - do not support C preprocessor directives
 - getting user input in C does not work correctly
-- multiple lines are not allowe as input (use `:edit` instead)
+- multiple lines are not allowed as input (use `:edit` instead)
 
 
 ## Requirements
