@@ -2,6 +2,11 @@
 The software is still pre-alpha quality. Use at your own risks.
 
 # igcc - yet another interactive shell for C development
+
+<div align="center">
+<img src=image/tty.gif "tty">
+</div>
+
 ## Overview
 igcc is an interactive shell for C development, 
 which can be utilized like REPL (Read-Eval-Print-Loop)
@@ -29,12 +34,6 @@ Its features and limitations are listed below:
 ## Installation
 
 Just put the script (igcc) into anywhere included in PATH.
-
-## Usage
-
-See the screenshot below:
-
-![screen-shot](image/screen-shot-01.png)
 
 ## See also
 - [CINT](http://www.hanno.jp/gotom/Cint.html) - a C/C++ interpreter which supports ANSI-C
