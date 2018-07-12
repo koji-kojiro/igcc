@@ -242,11 +242,12 @@ function command-show () {
       flag=true
       for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
         if $flag; then
-          printf "\x1b[36m%4s\x1b[m: %s\n" "\$$i" "$line"
+          printf "\x1b[36m%4s\x1b[m: " "\$$(($i + 1))"
           flag=false
         else
-          printf "    : %s\n" "$line"
+          printf "    : "
         fi
+        printf "%s\n" "$line"
       done
       IFS=$_IFS
     done)"
