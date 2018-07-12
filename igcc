@@ -236,7 +236,8 @@ function command-show () {
     local line
     local flag=true
     local _IFS=$IFS
-    for ((i=0; i < $count; i++)); do
+
+    echo "$(for ((i=0; i < $count; i++)); do
       IFS=$'\n'
       flag=true
       for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
@@ -248,7 +249,7 @@ function command-show () {
         fi
       done
       IFS=$_IFS
-    done
+    done)"
   fi
 }
 
