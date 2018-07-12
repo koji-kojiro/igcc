@@ -142,7 +142,7 @@ function compile-and-run () {
 
 function command-help () {
   cat << EOS
-    :edit               invoke ${EDITOR:-editor}.
+    :edit               invoke ${EDITOR:-vi}.
     :exit               exit $prog.
     :help               show this help.
     :include <header>   add header file.
@@ -155,7 +155,8 @@ EOS
 
 function command-edit () {
   local file=$(mktemp)
-  $EDITOR $file
+  ${EDITOR:-vi} $file
+
   local content="$(cat $file)"
   rm -f $file
   if [ -z "$content" ]; then
