@@ -26,6 +26,18 @@ gccversion=$(gcc --version | grep ^gcc)
 headers=(stdio.h)
 prog=$(basename $0)
 
+if type indent >/dev/null 2>&1; then
+  indent="indent -gnu -nut"
+else
+  indent=cat
+fi
+
+if type source-highlight >/dev/null 2>&1; then
+  highlight="source-highlight -s c -f esc"
+else
+  highlight=cat
+fi
+
 readonly runtime="\
 #define __fmt_string(v) _Generic((v),\\
   char*:\"\\x1b[34m\$%d\\x1b[0m = (string)\\\"%s\\\"\\n\",\\
@@ -137,6 +149,7 @@ function command-help () {
     :lib <library>      add shared library to be linked.
     :load <file>        restore enviroment from <file>.
     :save <file>        save current environment into <file>.      
+    :show               show history.
 EOS
 }
 
@@ -215,6 +228,30 @@ EOS
   fi
 }
 
+function command-show () {
+  if [ $count -eq 0 ]; then
+    print-error "Nothing to show."
+  else 
+    local i
+    local line
+    local flag=true
+    local _IFS=$IFS
+    for ((i=0; i < $count; i++)); do
+      IFS=$'\n'
+      flag=true
+      for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
+        if $flag; then
+          printf "\x1b[36m%4s\x1b[m: %s\n" "\$$i" "$line"
+          flag=false
+        else
+          printf "    : %s\n" "$line"
+        fi
+      done
+      IFS=$_IFS
+    done
+  fi
+}
+
 function main-loop () {
   local line
   while true; do
@@ -236,6 +273,8 @@ function main-loop () {
       command-load $line
     elif [[ $line = :save\ * ]]; then
       command-save $line
+    elif [ "$line" = ":show" ]; then
+      command-show
     elif [[ $line = :* ]]; then
       print-error "Invalid command or missing arguments. try \`:help\`."
     elif [[ $line = \#* ]]; then
