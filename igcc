@@ -48,6 +48,7 @@ readonly runtime="\
   double:\"\\x1b[34m\$%d\\x1b[0m = (double)%f\\n\",\\
   unsigned int:\"\\x1b[34m\$%d\\x1b[0m = (unsigned int)%u\\n\",\\
   unsigned long:\"\\x1b[34m\$%d\\x1b[0m = (unsigned long)%lu\\n\",\\
+  void*:\"\\x1b[34m\$%d\\x1b[0m = (void*)%p\\n\",\\
   default:\"\\x1b[34m\$%d\\x1b[0m = (unknown type)%p\\n\")
 
 #define __print(v) printf(__fmt_string(v), COUNT, v)
