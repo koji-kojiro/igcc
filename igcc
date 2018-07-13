@@ -132,7 +132,7 @@ function compile-and-run () {
       lines="(${lines[@]:0:$count})"
       print-error "Segmentation fault."
     fi
- else
+  else
     let count--
     lines=(${lines[@]:0:$count})
     print-success "$(echo $output | grep -E error: | sort -u)"
@@ -163,8 +163,18 @@ function command-clear () {
 
 function command-edit () {
   local file=$(mktemp)
-  ${EDITOR:-vi} $file
-  local content="$(cat $file)"
+  local editor=${EDITOR:-vi}
+  
+  if [ "${editor[0]}" = "vi" ] ||\
+     [ "${editor[0]}" = "vim" ]; then
+    printf "\n// vi:filetype=c" > $file
+  elif [ "${editor[0]}" = "emacs" ]; then
+    echo "// -*- mode:c -*-" > $file
+  fi
+  
+  $editor $file
+  
+  local content="$(sed "/^\/\/.*$/d" $file)"
   rm -f $file
   if [ -z "$content" ]; then
     print-error "Nothing to compile."
