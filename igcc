@@ -143,6 +143,7 @@ function compile-and-run () {
 
 function command-help () {
   cat << EOS
+    :clear              clear history and reset environment.
     :edit               invoke ${EDITOR:-vi}.
     :exit               exit $prog.
     :help               show this help.
@@ -152,6 +153,12 @@ function command-help () {
     :save <file>        save current environment into <file>.      
     :show               show history.
 EOS
+}
+
+function command-clear () {
+  count=0
+  libs=()
+  headers=(stdio.h)
 }
 
 function command-edit () {
@@ -178,27 +185,31 @@ function command-include () {
       if [ -z $(echo \#include \"$header\" |\
               gcc -xc - 2>&1 | grep -o $header) ]; then
         headers+=("$header")
+        print-success "(${headers[*]})"
       else
         print-error "Could not find \`$header\`."
       fi
+    else
+      print-error "Already included."
     fi
-    print-success "(${headers[*]})"
   fi
 }
 
 function command-lib () {
   local lib=$2
   if [ -z $lib ]; then
-    IFS= print-success "(${libs[*]})"
+    print-success "(${libs[*]})"
   else
     if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
       if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
         print-error "Could not find \`lib$lib.so\`."
       else
         libs+=("-l$lib")
+        print-success "(${libs[*]})"
       fi
+    else
+      print-error "Already linked."
     fi
-    IFS= print-success "(${libs[*]})"
   fi
 }
 
@@ -230,30 +241,38 @@ EOS
   fi
 }
 
-function command-show () {
-  if [ $count -eq 0 ]; then
-    print-error "Nothing to show."
-  else 
-    local i
-    local line
-    local flag=true
-    local _IFS=$IFS
 
-    echo "$(for ((i=0; i < $count; i++)); do
-      IFS=$'\n'
-      flag=true
-      for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
-        if $flag; then
-          printf "\x1b[36m%4s\x1b[m: " "\$$(($i + 1))"
-          flag=false
-        else
-          printf "    : "
-        fi
-        printf "%s\n" "$line"
-      done
-      IFS=$_IFS
-    done)"
-  fi
+
+function command-show () {
+  echo "$(
+  local i
+  for ((i=0; i < ${#headers[@]}; i++)); do
+    if [ $i -eq 0 ]; then
+      printf "\x1b[36minclude\x1b[m: "
+    else
+      printf "       : "
+    fi
+    printf "#include \"%s\"\n" ${headers[i]} |\
+      eval $indent | eval $highlight
+  done
+
+  local line
+  local flag=true
+  local _IFS=$IFS
+  for ((i=0; i < $count; i++)); do
+    IFS=$'\n'
+    flag=true
+    for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
+      if $flag; then
+        printf "\x1b[36m%7s\x1b[m: " "\$$(($i + 1))"
+        flag=false
+      else
+        printf "        : "
+      fi
+      printf "%s\n" "$line"
+    done
+    IFS=$_IFS
+  done)"
 }
 
 function main-loop () {
@@ -263,6 +282,8 @@ function main-loop () {
     history -s "$line"
     if [ -z "$line" ]; then
       exit-with-prompt
+    elif [ "$line" = ":clear" ]; then
+      command-clear
     elif [ "$line" = ":edit" ]; then
       command-edit
     elif [ "$line" = ":exit" ]; then
