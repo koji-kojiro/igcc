@@ -313,6 +313,8 @@ function main-loop () {
       print-error "Invalid command or missing arguments. try \`:help\`."
     elif [[ $line = \#* ]]; then
       print-error "CPP directive is not allowed. \`try :help\`."
+    elif [[ $line = \!* ]]; then
+      $(echo "$line" | sed -e 's/^.//g')
     else
       local _IFS="$IFS"
       IFS= lines+=("$line")
