@@ -40,16 +40,16 @@ fi
 
 readonly runtime="\
 #define __fmt_string(v) _Generic((v),\\
-  char*:\"\\x1b[34m\$%d\\x1b[0m = (string)\\\"%s\\\"\\n\",\\
-  char:\"\\x1b[34m\$%d\\x1b[0m = (char)\\'%c\\'\\n\",\\
-  int:\"\\x1b[34m\$%d\\x1b[0m = (int)%d\\n\",\\
-  long:\"\\x1b[34m\$%d\\x1b[0m = (long)%ld\\n\",\\
-  float:\"\\x1b[34m\$%d\\x1b[0m = (float)%f\\n\",\\
-  double:\"\\x1b[34m\$%d\\x1b[0m = (double)%f\\n\",\\
-  unsigned int:\"\\x1b[34m\$%d\\x1b[0m = (unsigned int)%u\\n\",\\
-  unsigned long:\"\\x1b[34m\$%d\\x1b[0m = (unsigned long)%lu\\n\",\\
-  void*:\"\\x1b[34m\$%d\\x1b[0m = (void*)%p\\n\",\\
-  default:\"\\x1b[34m\$%d\\x1b[0m = (unknown type)%p\\n\")
+  char*:\"\\e[34m\$%d\\e[0m = (string)\\\"%s\\\"\\n\",\\
+  char:\"\\e[34m\$%d\\e[0m = (char)\\'%c\\'\\n\",\\
+  int:\"\\e[34m\$%d\\e[0m = (int)%d\\n\",\\
+  long:\"\\e[34m\$%d\\e[0m = (long)%ld\\n\",\\
+  float:\"\\e[34m\$%d\\e[0m = (float)%f\\n\",\\
+  double:\"\\e[34m\$%d\\e[0m = (double)%f\\n\",\\
+  unsigned int:\"\\e[34m\$%d\\e[0m = (unsigned int)%u\\n\",\\
+  unsigned long:\"\\e[34m\$%d\\e[0m = (unsigned long)%lu\\n\",\\
+  void*:\"\\e[34m\$%d\\e[0m = (void*)%p\\n\",\\
+  default:\"\\e[34m\$%d\\e[0m = (unknown type)%p\\n\")
 
 #define __print(v) printf(__fmt_string(v), COUNT, v)
 "
@@ -62,7 +62,7 @@ int main (void)
   __print(({__code}));
 #else
   __code
-  printf(\"\\x1b[34m\$%%d\\x1b[0m = (void)\\\\n\", COUNT);
+  printf(\"\\e[34m\$%%d\\e[0m = (void)\\\\n\", COUNT);
 #endif
   return 0;
 }
@@ -164,7 +164,6 @@ function command-clear () {
 function command-edit () {
   local file=$(mktemp)
   ${EDITOR:-vi} $file
-
   local content="$(cat $file)"
   rm -f $file
   if [ -z "$content" ]; then
@@ -248,7 +247,7 @@ function command-show () {
   local i
   for ((i=0; i < ${#headers[@]}; i++)); do
     if [ $i -eq 0 ]; then
-      printf "\x1b[36minclude\x1b[m: "
+      printf "\e[36minclude\e[m: "
     else
       printf "       : "
     fi
@@ -264,7 +263,7 @@ function command-show () {
     flag=true
     for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
       if $flag; then
-        printf "\x1b[36m%7s\x1b[m: " "\$$(($i + 1))"
+        printf "\e[36m%7s\e[m: " "\$$(($i + 1))"
         flag=false
       else
         printf "        : "
