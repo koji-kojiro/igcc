@@ -26,6 +26,65 @@ gccversion=$(gcc --version | grep ^gcc)
 headers=(stdio.h)
 prog=$(basename $0)
 
+completion_candidates=(
+  "auto" "break" "case" "char" "const"
+  "continue" "default" "do" "double"
+  "else" "enum" "extern" "float" "for"
+  "goto" "if" "int" "long" "register"
+  "return" "signed" "sizeof" "short"
+  "static" "struct" "switch" "typedef"
+  "union" "unsigned" "void" "volatile" "while"
+  ":clear" ":edit" ":exit" ":help"
+  ":include" ":lib" ":load" ":save" ":show" 
+)
+
+function possible-completions () {
+  printf "%s%s\n" "$(prompt)" "$READLINE_LINE"
+  local candidates=${@:-${completion_candidates[@]}}
+  local longest=""
+  local word
+  
+  for word in ${candidates[@]}; do
+    if [ ${#word} -gt ${#longest} ]; then
+      longest=$word
+    fi
+  done
+  local n=$((${#longest} + 5))
+  local cols=$(tput cols)
+  local fmt=$(printf "%%"$n"s%.0s" $(seq $((cols / n))))
+  printf ""$fmt"\n" ${candidates[@]}
+}
+
+function tab-complete () {
+  local words=($READLINE_LINE)
+  if [ $words ]; then
+    local slice=(${READLINE_LINE:0:$(($READLINE_POINT + 1))})
+    local n=$((${#slice[@]} - 1))
+    local comp_words=(\
+      $(compgen -W "$(echo ${completion_candidates[@]})" -- ${words[n]}))
+    if [ ${#comp_words[@]} -eq 1 ]; then
+      words[$n]=${comp_words[0]}
+    elif [ ${#comp_words[@]} -gt 1 ]; then
+      local prefix=$(printf "%s\n" "${comp_words[@]}" |\
+        sed -e '$!{N;s/^\(.*\).*\n\1.*$/\1\n\1/;D;}')
+      if [ $prefix = ${words[$n]} ]; then
+        possible-completions "${comp_words[@]}"
+      else
+        words[$n]=$prefix
+      fi
+    fi
+    READLINE_LINE=${words[@]}
+    slice="${words[@]:0:$(($n + 1))}"
+    READLINE_POINT=${#slice}
+  else
+    possible-completions
+  fi
+}
+
+bind -x '"\t":"tab-complete"' >/dev/null 2>&1
+bind -x '"\e?":"possible-completions"' >/dev/null 2>&1
+bind -x '"\e=":"possible-completions"' >/dev/null 2>&1
+
 if type indent >/dev/null 2>&1; then
   indent="indent -gnu -nut"
 else
@@ -287,7 +346,7 @@ function command-show () {
 function main-loop () {
   local line
   while true; do
-    IFS= read -er -p "$(prompt)" line
+    read -er -p "$(prompt)" line
     history -s "$line"
     if [ -z "$line" ]; then
       exit-with-prompt
