@@ -17,9 +17,10 @@ which invokes the compiler for each lines.
 Its features and limitations are listed below:
 
 **Features**
-- written in less than 200 lines of bash script
+- written in less than 400 lines of bash script
 - line editting with GNU Readline
 - some useful commands
+- tab-completion of keywords and commands
 
 **Limitations**
 - do not support C preprocessor directives
