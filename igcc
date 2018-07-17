@@ -400,8 +400,9 @@ function show-help-and-exit () {
   cat << EOS
 Usage: $prog [options]
 Options:
-  -h	show this help and exit.
-  -v	show version info and exit.
+  -h, --help        show this help and exit.
+  -v, --version     show version info and exit.
+  -std <standard>   specify c dialect.
 EOS
   exit 1
 }
@@ -411,26 +412,41 @@ function show-version-and-exit () {
   exit 1
 }
 
+function set-std () {
+  if [[ -z "$1" ]]; then
+    print-error "Missing argument."
+    exit 1
+  fi
+  if echo | gcc -std=$1 -fsyntax-only -xc - >/dev/null 2>&1; then
+    std=$1
+  else
+    print-error "Unrecognized option: $1"
+    exit 1
+  fi
+}
+
 function main () {
   local opt
-  while getopts vh opt; do
+  for opt in "$@"; do
     case $opt in
-      v) show-version-and-exit
+      '-v' | '--version')
+        show-version-and-exit
         ;;
-      h) show-help-and-exit
+      '-h' | '--help')
+        show-help-and-exit
         ;;
-      \?) show-help-and-exit
+      '-std')
+        set-std $2
+        shift 2
         ;;
     esac
   done
-  if [ $# -gt 0 ]; then
+
+  if [[ ! -z "$@" ]]; then
     show-help-and-exit
   fi
-  shift $((OPTIND - 1))
-  if [ $# -gt 1 ]; then
-    show-help-and-exit
-  fi
-  cat << EOS
+  
+cat << EOS
 $prog $version with $gccversion
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
