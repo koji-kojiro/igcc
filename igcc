@@ -385,7 +385,7 @@ function main-loop () {
     elif [[ $line = \#* ]]; then
       print-error "CPP directive is not allowed. \`try :help\`."
     elif [[ $line = \!* ]]; then
-      eval $(echo "$line" | sed -e 's/^.//g')
+      eval "$(echo "$line" | sed -e 's/^.//g')"
     else
       local _IFS="$IFS"
       IFS= lines+=("$line")
@@ -409,7 +409,7 @@ EOS
 }
 
 function show-version-and-exit () {
-  echo $prog $version
+  echo "$prog" "$version"
   exit 1
 }
 
@@ -418,7 +418,7 @@ function set-std () {
     print-error "Missing argument."
     exit 1
   fi
-  if echo | gcc -std=$1 -fsyntax-only -xc - >/dev/null 2>&1; then
+  if echo | gcc -std="$1" -fsyntax-only -xc - >/dev/null 2>&1; then
     std=$1
   else
     print-error "Unrecognized option: $1"
@@ -437,13 +437,13 @@ function main () {
         show-help-and-exit
         ;;
       '-std')
-        set-std $2
+        set-std "$2"
         shift 2
         ;;
     esac
   done
 
-  if [[ ! -z "$@" ]]; then
+  if [[ ! -z "$*" ]]; then
     show-help-and-exit
   fi
   
@@ -456,4 +456,4 @@ EOS
   main-loop
 }
 
-main $@
+main "$@"
