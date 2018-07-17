@@ -322,14 +322,12 @@ EOS
   fi
 }
 
-
-
 function command-show () {
   echo "$(
   local i
   for ((i=0; i < ${#headers[@]}; i++)); do
     if [ $i -eq 0 ]; then
-      printf "\e[36minclude\e[m: "
+      printf "\e[34minclude\e[m: "
     else
       printf "       : "
     fi
@@ -345,7 +343,7 @@ function command-show () {
     flag=true
     for line in $(echo "${lines[i]}" | eval $indent | eval $highlight); do
       if $flag; then
-        printf "\e[36m%7s\e[m: " "\$$(($i + 1))"
+        printf "\e[34m%7s\e[m: " "\$$(($i + 1))"
         flag=false
       else
         printf "        : "
