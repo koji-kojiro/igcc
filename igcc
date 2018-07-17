@@ -55,11 +55,23 @@ function possible-completions () {
   printf ""$fmt"\n" ${candidates[@]}
 }
 
+readonly comp_wordbreaks=("(" ")" ";" "{" "}")
+
 function tab-complete () {
   local words=($READLINE_LINE)
   if [ $words ]; then
     local slice=(${READLINE_LINE:0:$(($READLINE_POINT + 1))})
     local n=$((${#slice[@]} - 1))
+
+    local break
+    for break in ${comp_wordbreaks[@]}; do
+      if [[ ${words[$n]} == $break* ]]; then
+        words[$n]="$(echo ${words[$n]} | cut -b 2-)"
+        break
+      fi
+      break=
+    done
+
     local comp_words=(\
       $(compgen -W "$(echo ${completion_candidates[@]})" -- ${words[n]}))
     if [ ${#comp_words[@]} -eq 1 ]; then
@@ -73,6 +85,7 @@ function tab-complete () {
         words[$n]=$prefix
       fi
     fi
+    words[$n]="$break${words[$n]}"
     READLINE_LINE=${words[@]}
     slice="${words[@]:0:$(($n + 1))}"
     READLINE_POINT=${#slice}
