@@ -36,6 +36,36 @@ Its features and limitations are listed below:
 
 Just put the script (igcc) into anywhere included in PATH.
 
+## Usage
+### Options
+
+```
+Usage: igcc [options]
+Options:
+  -h, --help        show this help and exit.
+  -v, --version     show version info and exit.
+  -std <standard>   specify c dialect.
+```
+
+### commands
+
+```
+gnu11@(igcc)> :help
+    :clear              clear history and reset environment.
+    :edit               invoke vi.
+    :exit               exit igcc.
+    :help               show this help.
+    :include <header>   add header file.
+    :lib <library>      add shared library to be linked.
+    :load <file>        restore enviroment from <file>.
+    :save <file>        save current environment into <file>.      
+    :show               show history.
+    ! <command>         excute shell command.
+```
+
+If `source-highlight` is available on your system, `:show` uses it to highlight history.
+Also, if `indent` is available, it is usesd to format history.
+
 ## See also
 - [CINT](http://www.hanno.jp/gotom/Cint.html) - a C/C++ interpreter which supports ANSI-C
 - [Cling](https://root.cern.ch/cling) - a C++ interpreter built on the top of LLVM and Clang
