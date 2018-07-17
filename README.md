@@ -64,7 +64,7 @@ gnu11@(igcc)> :help
 ```
 
 If `source-highlight` is available on your system, `:show` uses it to highlight history.
-Also, if `indent` is available, it is usesd to format history.
+Also, if `indent` is available, it is used to format history.
 
 ## See also
 - [CINT](http://www.hanno.jp/gotom/Cint.html) - a C/C++ interpreter which supports ANSI-C
