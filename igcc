@@ -356,6 +356,35 @@ function command-show () {
   done)"
 }
 
+function validate-line () {
+  local line="$(add-semicolon-if-needed "$*")"
+  echo "void main() { "$line" }" |\
+    gcc -xc -w -fsyntax-only - 2>&1 |\
+    grep -E "error: expected declaration or statement at end of input" >/dev/null
+  echo "$?" 
+}
+
+function read-multiline () {
+  local buf=("$1")
+  local line
+  local prompt="$(prompt |\
+    sed -e "s/[[:cntrl:]]\[[0-9]*m//g" -e "s/././g" | cut -b 2-) "
+  
+  while true; do
+   if [ $(validate-line "${buf[@]}") -eq 1 ]; then
+      break
+    fi
+    read -erp "$prompt" line
+    history -s "$line"
+    if [ "$line" = "." ]; then
+      echo ""
+      return
+    fi
+    buf+=("$line")
+  done
+  echo "$(IFS=; echo "${buf[*]}")"
+}
+
 function main-loop () {
   local line
   while true; do
@@ -388,11 +417,14 @@ function main-loop () {
     elif [[ $line = \!* ]]; then
       eval "$(echo "$line" | sed -e 's/^.//g')"
     else
-      local _IFS="$IFS"
-      IFS= lines+=("$line")
-      let count++
-      compile-and-run
-      IFS="$_IFS"
+      line="$(read-multiline "$line")"
+      if [ "$line" ]; then 
+        local _IFS="$IFS"
+        IFS= lines+=("$line")
+        let count++
+        compile-and-run
+        IFS="$_IFS"
+      fi
     fi
     echo
   done
