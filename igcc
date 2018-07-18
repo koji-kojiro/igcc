@@ -316,7 +316,8 @@ function command-save () {
     cat << EOS > $file
 lib=(${libs[@]})
 headers=(${headers[@]})
-lines=($(printf "\"%s\" " "${lines[@]}"))
+std=$std
+lines=($(printf "%q " "${lines[@]}"))
 count=$count
 EOS
    print-success "Wrote into \`$file\`."
