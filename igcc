@@ -181,12 +181,20 @@ function add-semicolon-if-needed () {
 
 function create-source () {
   local i
-  local body="freopen(\"/dev/null\", \"w\", stdout);"
+  if [ -z "$script" ]; then
+    local body="freopen(\"/dev/null\", \"w\", stdout);"
+  else
+    local body=""
+  fi
   for ((i = 0; i < $count - 1; i++)); do
     body+="({$(add-semicolon-if-needed ${lines[i]})"
   done
-  body+="({freopen(\"/dev/tty\", \"w\", stdout);\
-    $(add-semicolon-if-needed ${lines[i]})\
+  if [ -z "$script" ]; then
+    body+="({freopen(\"/dev/tty\", \"w\", stdout);"
+  else
+    body+="({;"
+  fi
+  body+="$(add-semicolon-if-needed ${lines[i]})\
     $(printf "});%.0s" ${lines[@]})"
   local include="$(printf "#include \"%s\"\n" "${headers[@]}")"
   printf "%s\n%s\n$template\n" "$include" "$runtime" "$body"
@@ -194,7 +202,6 @@ function create-source () {
 
 function compile-and-run () { 
   local bin=$(mktemp)
-  local result
   local src="$(create-source)"
   if [ -z "$script" ]; then
     local output="$(\
@@ -206,11 +213,15 @@ function compile-and-run () {
     local output="$(echo $src | gcc -xc -std=$std -o $bin -DSCRIPT - 2>&1)"
   fi
   if [ -x $bin ]; then
-    result=$($bin || echo failed)
-    if [ ! -z "$result" ]; then
-      let count--
-      lines="(${lines[@]:0:$count})"
-      print-error "Segmentation fault."
+    if [ -z "$script" ]; then
+      local result="$($bin 2>&1 || echo failed)"
+      if [ ! -z "$result" ]; then
+        let count--
+        lines=(${lines[@]:0:$count})
+        print-error "Segmentation fault."
+      fi
+    else
+      $bin || print-error "Segmentation fault"
     fi
   else
     let count--
