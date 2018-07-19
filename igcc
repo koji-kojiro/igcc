@@ -153,7 +153,9 @@ function print-error() {
 }
 
 function print-success() {
-  printf "\e[34m$1\e[m\n"
+  if [ -z "$script" ]; then
+    printf "\e[34m$1\e[m\n"
+  fi
 }
 
 function prompt() {
@@ -161,9 +163,6 @@ function prompt() {
 }
 
 function exit-with-prompt () {
-  if [ ! -z "$script" ]; then
-    exit 0
-  fi
   local response
   echo
   read -r -p "Do you really want to exit ([y]/n)? " response
@@ -189,13 +188,8 @@ function create-source () {
   body+="({freopen(\"/dev/tty\", \"w\", stdout);\
     $(add-semicolon-if-needed ${lines[i]})\
     $(printf "});%.0s" ${lines[@]})"
-  local include
-  local header
-  for header in ${headers[@]}; do
-    include+="#include \"$header\"\n"
-  done
-  include="$(IFS= printf "$include")"
-  printf "%s\n%s\n$template\n" $include "$runtime" "$body"
+  local include="$(printf "#include \"%s\"\n" "${headers[@]}")"
+  printf "%s\n%s\n$template\n" "$include" "$runtime" "$body"
 }
 
 function compile-and-run () { 
@@ -222,7 +216,7 @@ function compile-and-run () {
     let count--
     lines=(${lines[@]:0:$count})
     print-success "$(echo $output | grep -E error: | sort -u)"
-    print-error "Failed to compile.:"
+    print-error "Failed to compile."
   fi
   rm -f $bin
 }
@@ -391,7 +385,7 @@ function read-multiline () {
     if [ -z "$script" ]; then
       read -erp "$prompt" line
     else
-      read -erp "$prompt" -t 2 line
+      read -erp "$prompt" -t 20 line
     fi
     history -s "$line"
     if [ "$line" = "." ]; then
@@ -409,7 +403,12 @@ function main-loop () {
     read -er -p "$(prompt)" line
     history -s "$line"
     if [ -z "$line" ]; then
-      exit-with-prompt
+      if [ -z "$script" ]; then
+          exit-with-prompt
+      else
+        IFS= compile-and-run
+        break
+      fi
     elif [ "$line" = ":clear" ]; then
       command-clear
     elif [ "$line" = ":edit" ]; then
@@ -440,7 +439,9 @@ function main-loop () {
         local _IFS="$IFS"
         IFS= lines+=("$line")
         let count++
-        compile-and-run
+        if [ -z "$script" ]; then
+          compile-and-run
+        fi
         IFS="$_IFS"
       fi
     fi
@@ -454,9 +455,10 @@ function show-help-and-exit () {
   cat << EOS
 Usage: $prog [options]
 Options:
-  -h, --help        show this help and exit.
-  -v, --version     show version info and exit.
-  -std <standard>   specify c dialect.
+  -h, --help           show this help and exit.
+  -v, --version        show version info and exit.
+  -std <standard>      specify c dialect.
+  -S, --script <file>  interpret file and exit.
 EOS
   exit 1
 }
@@ -505,7 +507,8 @@ function main () {
   fi
 
   if [ ! -z "$script" ]; then
-    cat "$script" | sed '/^$/d' | main-loop
+    cat "$script" | sed -e '/^$/d' -e '/^[#|!].*$/d' | main-loop
+#     compile-and-run
     exit 0
   fi
   
