@@ -25,6 +25,7 @@ std=gnu11
 gccversion=$(gcc --version | grep ^gcc)
 headers=(stdio.h)
 prog=$(basename $0)
+script=""
 
 completion_candidates=(
   "auto" "break" "case" "char" "const"
@@ -131,10 +132,14 @@ readonly template="\
 int main (void)
 {
 #ifdef PRINT
+#ifndef SCRIPT
   __print(({__code}));
+#endif
 #else
   __code
+#ifndef SCRIPT
   printf(\"\\e[34m\$%%d\\e[0m = (void)\\\\n\", COUNT);
+#endif
 #endif
   return 0;
 }
@@ -142,6 +147,9 @@ int main (void)
 
 function print-error() {
   printf "\e[31mError:$1\e[m\n"
+  if [ ! -z "$script" ]; then 
+    exit 1
+  fi
 }
 
 function print-success() {
@@ -153,6 +161,9 @@ function prompt() {
 }
 
 function exit-with-prompt () {
+  if [ ! -z "$script" ]; then
+    exit 0
+  fi
   local response
   echo
   read -r -p "Do you really want to exit ([y]/n)? " response
@@ -191,12 +202,15 @@ function compile-and-run () {
   local bin=$(mktemp)
   local result
   local src="$(create-source)"
-  local output="$(\
-    echo $src | gcc -xc -std=$std -o $bin -DPRINT \
+  if [ -z "$script" ]; then
+    local output="$(\
+      echo $src | gcc -xc -std=$std -o $bin -DPRINT \
       -DCOUNT=$count ${libs[@]} - 2>&1 || \
-    echo $src | gcc -xc -std=$std -o $bin \
+      echo $src | gcc -xc -std=$std -o $bin \
       -DCOUNT=$count ${libs[@]} - 2>&1)"
-   
+  else
+    local output="$(echo $src | gcc -xc -std=$std -o $bin -DSCRIPT - 2>&1)"
+  fi
   if [ -x $bin ]; then
     result=$($bin || echo failed)
     if [ ! -z "$result" ]; then
@@ -374,7 +388,11 @@ function read-multiline () {
    if [ $(validate-line "${buf[@]}") -eq 1 ]; then
       break
     fi
-    read -erp "$prompt" line
+    if [ -z "$script" ]; then
+      read -erp "$prompt" line
+    else
+      read -erp "$prompt" -t 2 line
+    fi
     history -s "$line"
     if [ "$line" = "." ]; then
       echo ""
@@ -426,7 +444,9 @@ function main-loop () {
         IFS="$_IFS"
       fi
     fi
-    echo
+    if [ -z "$script" ];then
+      echo
+    fi
   done
 }
 
@@ -473,11 +493,20 @@ function main () {
         set-std "$2"
         shift 2
         ;;
+      '-S' | '--script')
+        script="$2"
+        shift 2
+        ;;
     esac
   done
 
-  if [[ ! -z "$*" ]]; then
+  if [ ! -z "$*" ]; then
     show-help-and-exit
+  fi
+
+  if [ ! -z "$script" ]; then
+    cat "$script" | sed '/^$/d' | main-loop
+    exit 0
   fi
   
 cat << EOS
