@@ -249,6 +249,7 @@ EOS
 
 function command-clear () {
   count=0
+  lines=()
   libs=()
   headers=(stdio.h)
 }
