@@ -532,8 +532,12 @@ function main () {
 	esac
         shift 2
         ;;
-      '-r' | '--load')
+      '-r' | '--require')
         pre_scripts+=("$(cat "$2" | sed -e '/^$/d')")
+        shift 2
+        ;;
+      '-e' | '--eval')
+        pre_scripts+=("$(echo "$2" | sed -e '/^$/d')")
         shift 2
         ;;
       '-Pc')
