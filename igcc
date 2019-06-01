@@ -205,12 +205,12 @@ function compile-and-run () {
   local src="$(create-source)"
   if [ -z "$not_interactive" ]; then
     local output="$(\
-      echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" -DPRINT \
-      -DCOUNT=$count "${libs[@]}" - 2>&1 || \
-      echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" \
-      -DCOUNT=$count ${libs[@]} - 2>&1)"
+      echo "$src" | "$cc" -xc -o "$bin" -DPRINT \
+      -DCOUNT=$count "${cmds[@]}" - 2>&1 || \
+      echo "$src" | "$cc" -xc -o "$bin" \
+      -DCOUNT=$count "${cmds[@]}" - 2>&1)"
   else
-    local output="$(echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" -DSCRIPT "${libs[@]}" - 2>&1)"
+    local output="$(echo "$src" | "$cc" -xc -o "$bin" -DSCRIPT "${cmds[@]}" - 2>&1)"
   fi
   if [ -x "$bin" ]; then
     if [ -z "$not_interactive" ]; then
@@ -285,7 +285,7 @@ function command-include () {
   else
     if [ -z $(echo "${headers[@]}" | grep -o "$header") ]; then
       if [ -z "$(echo \#include \""$header"\" |\
-              "$cc" -xc - 2>&1 | grep -o "$header")" ]; then
+              "$cc" -xc "${cmds[@]}" - 2>&1 | grep -o "$header")" ]; then
         headers+=("$header")
         print-success "(${headers[*]})"
       else
@@ -303,10 +303,11 @@ function command-lib () {
     print-success "(${libs[*]})"
   else
     if [ -z "$(echo "${libs[@]}" | grep -o "$lib")" ]; then
-      if [ -z "$("$cc" -l$2 2>&1 | grep -o main)" ]; then
+      if [ -z "$("$cc" "${cmds[@]}" -l$2 2>&1 | grep -o main)" ]; then
         print-error "Could not find \`lib$lib.so\`."
       else
         libs+=("-l$lib")
+        cmds+=("-l$lib")
         print-success "(${libs[*]})"
       fi
     else
