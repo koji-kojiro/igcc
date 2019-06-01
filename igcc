@@ -33,7 +33,7 @@ ccversion(){
 }
 headers=(stdio.h)
 prog="$(basename $0)"
-script=""
+not_interactive=""
 pre_scripts=()
 
 completion_candidates=(
@@ -156,13 +156,13 @@ int main (void)
 
 function print-error() {
   printf "\e[31mError:$1\e[m\n"
-  if [ ! -z "$script" ]; then 
+  if [ "$not_interactive" ]; then
     exit 1
   fi
 }
 
 function print-success() {
-  if [ -z "$script" ]; then
+  if [ -z "$not_interactive" ]; then
     printf "\e[34m$1\e[m\n"
   fi
 }
@@ -181,7 +181,7 @@ function add-semicolon-if-needed () {
 
 function create-source () {
   local i
-  if [ -z "$script" ]; then
+  if [ -z "$not_interactive" ]; then
     local body="freopen(\"/dev/null\", \"w\", stdout);"
   else
     local body=""
@@ -189,7 +189,7 @@ function create-source () {
   for ((i = 0; i < $count - 1; i++)); do
     body+="({$(add-semicolon-if-needed "${lines[i]}")"
   done
-  if [ -z "$script" ]; then
+  if [ -z "$not_interactive" ]; then
     body+="({freopen(\"/dev/tty\", \"w\", stdout);"
   else
     body+="({;"
@@ -203,7 +203,7 @@ function create-source () {
 function compile-and-run () { 
   local bin="$(mktemp)"
   local src="$(create-source)"
-  if [ -z "$script" ]; then
+  if [ -z "$not_interactive" ]; then
     local output="$(\
       echo "$src" | "$cc" "${args[@]}" -xc -o "$bin" -DPRINT \
       -DCOUNT=$count "${libs[@]}" - 2>&1 || \
@@ -213,7 +213,7 @@ function compile-and-run () {
     local output="$(echo "$src" | "$cc" "${args[@]}" -xc -o "$bin" -DSCRIPT "${libs[@]}" - 2>&1)"
   fi
   if [ -x "$bin" ]; then
-    if [ -z "$script" ]; then
+    if [ -z "$not_interactive" ]; then
       local result="$("$bin" 2>&1 || echo failed)"
       if [ ! -z "$result" ]; then
         let count--
@@ -393,7 +393,7 @@ function read-multiline () {
    if [ "$(validate-line "${buf[@]}")" -eq 1 ]; then
       break
     fi
-    if [ -z "$script" ]; then
+    if [ -z "$not_interactive" ]; then
       read -erp "$prompt" line
     else
       read -erp "$prompt" -t 20 line
@@ -419,7 +419,7 @@ function main-loop () {
     fi
     history -s "$line"
     if [ -z "$line" ]; then
-      if [ -z "$script" ]; then
+      if [ -z "$not_interactive" ]; then
           :
       else
         IFS= compile-and-run
@@ -455,13 +455,13 @@ function main-loop () {
         local _IFS="$IFS"
         IFS= lines+=("$line")
         let count++
-        if [ -z "$script" ]; then
+        if [ -z "$not_interactive" ]; then
           compile-and-run
         fi
         IFS="$_IFS"
       fi
     fi
-    if [ -z "$script" ];then
+    if [ -z "$not_interactive" ];then
       echo
     fi
   done
@@ -471,13 +471,14 @@ function show-help-and-exit () {
   cat << EOS
 Usage: $prog [options]
 Options:
-  -h, --help           show this help and exit.
-  -v, --version        show version info and exit.
-  -std <standard>      specify c dialect.
-  -S, --script <file>  interpret file and exit.
-  -r, --load <file>    interpret file.
-  -Pc <option>         pass <option> to "$cc".
-  -cc <compiler>       specify c compiler.
+  -h, --help                   show this help and exit.
+  -v, --version                show version info and exit.
+  -std <standard>              specify c dialect.
+  -i, --interactive <boolean>  interactive or not. default: true
+  -r, --load <file>            interpret file.
+  -e, --eval <...>             evaluate script.
+  -Pc <option>                 pass <option> to "$cc".
+  -cc <compiler>               specify c compiler.
 EOS
   exit 1
 }
@@ -505,7 +506,7 @@ function main () {
   local scripts=()
   local std
   for opt in "$@"; do
-    case $opt in
+    case "$opt" in
       '-v' | '--version')
         show-version-and-exit
         ;;
@@ -516,9 +517,18 @@ function main () {
         set-std "$2"
         shift 2
         ;;
-      '-S' | '--script')
-        script="true"
-        scripts+=("$(cat "$2" | sed -e '/^$/d')")
+      '-i' | '--interactive')
+        case "$2" in
+	  'true' | 't' | '1')
+	    not_interactive=""
+	    ;;
+	  'false' | 'f' | '0')
+	    not_interactive="t"
+	    ;;
+	  *)
+	    show-help-and-exit
+	    ;;
+	esac
         shift 2
         ;;
       '-r' | '--load')
@@ -536,23 +546,19 @@ function main () {
     esac
   done
 
+  [ ! -z "$*" ] && show-help-and-exit
+
   [ ! -z "$std" ] && set-std "$std"
 
-  if [ ! -z "$*" ]; then
-    show-help-and-exit
-  fi
-
-  if [ ! -z "$script" ]; then
-    echo "${scripts[*]}" | main-loop
-  else
+  if [ -z "$not_interactive" ]; then
 cat << EOS
 $prog $version with $(ccversion)
 $copy
 try \`:help\` to get help. Ctrl-C to exit.
 
 EOS
-    main-loop
   fi
+  main-loop
 }
 
 main "$@"
