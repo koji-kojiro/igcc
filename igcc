@@ -22,7 +22,13 @@ lines=()
 count=0
 libs=()
 std=gnu11
-gccversion=$(gcc --version | grep ^gcc)
+if type clang >/dev/null 2>/dev/null; then
+  cc=clang
+  ccversion=$(clang --version | grep ^clang)
+else
+  cc=gcc
+  ccversion=$(gcc --version | grep ^gcc)
+fi
 headers=(stdio.h)
 prog=$(basename $0)
 script=""
@@ -206,12 +212,12 @@ function compile-and-run () {
   local src="$(create-source)"
   if [ -z "$script" ]; then
     local output="$(\
-      echo $src | gcc -xc -std=$std -o $bin -DPRINT \
+      echo "$src" | "$cc" -xc -std=$std -o $bin -DPRINT \
       -DCOUNT=$count ${libs[@]} - 2>&1 || \
-      echo $src | gcc -xc -std=$std -o $bin \
+      echo "$src" | "$cc" -xc -std=$std -o $bin \
       -DCOUNT=$count ${libs[@]} - 2>&1)"
   else
-    local output="$(echo $src | gcc -xc -std=$std -o $bin -DSCRIPT - 2>&1)"
+    local output="$(echo $src | "$cc" -xc -std=$std -o $bin -DSCRIPT - 2>&1)"
   fi
   if [ -x $bin ]; then
     if [ -z "$script" ]; then
@@ -286,7 +292,7 @@ function command-include () {
   else
     if [ -z $(echo "${headers[@]}" | grep -o $header) ]; then
       if [ -z $(echo \#include \"$header\" |\
-              gcc -xc - 2>&1 | grep -o $header) ]; then
+              "$cc" -xc - 2>&1 | grep -o $header) ]; then
         headers+=("$header")
         print-success "(${headers[*]})"
       else
@@ -304,7 +310,7 @@ function command-lib () {
     print-success "(${libs[*]})"
   else
     if [ -z $(echo "${libs[@]}" | grep -o $lib) ]; then
-      if [ -z $(gcc -l$2 2>&1 | grep -o main) ]; then
+      if [ -z "$("$cc" -l$2 2>&1 | grep -o main)" ]; then
         print-error "Could not find \`lib$lib.so\`."
       else
         libs+=("-l$lib")
@@ -380,7 +386,7 @@ function command-show () {
 function validate-line () {
   local line="$(add-semicolon-if-needed "$*")"
   echo "void main() { "$line" }" |\
-    gcc -xc -w -fsyntax-only - 2>&1 |\
+    "$cc" -xc -w -fsyntax-only - 2>&1 |\
     grep -E "error: expected declaration or statement at end of input" >/dev/null
   echo "$?" 
 }
@@ -492,7 +498,7 @@ function set-std () {
     print-error "Missing argument."
     exit 1
   fi
-  if echo | gcc -std="$1" -fsyntax-only -xc - >/dev/null 2>&1; then
+  if echo | "$cc" -std="$1" -fsyntax-only -xc - >/dev/null 2>&1; then
     std=$1
   else
     print-error "Unrecognized option: $1"
@@ -535,7 +541,7 @@ function main () {
     echo "${scripts[*]}" | main-loop
   else
 cat << EOS
-$prog $version with $gccversion
+$prog $version with $ccversion
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
 
