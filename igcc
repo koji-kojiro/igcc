@@ -26,6 +26,7 @@ gccversion=$(gcc --version | grep ^gcc)
 headers=(stdio.h)
 prog=$(basename $0)
 script=""
+pre_scripts=()
 
 completion_candidates=(
   "auto" "break" "case" "char" "const"
@@ -412,7 +413,12 @@ function read-multiline () {
 function main-loop () {
   local line
   while true; do
-    read -er -p "$(prompt)" line
+    if [ "${#pre_scripts[@]}" != 0 ]; then
+      line="${pre_scripts[*]}"
+      pre_scripts=()
+    else
+      read -er -p "$(prompt)" line
+    fi
     history -s "$line"
     if [ -z "$line" ]; then
       if [ -z "$script" ]; then
@@ -471,6 +477,7 @@ Options:
   -v, --version        show version info and exit.
   -std <standard>      specify c dialect.
   -S, --script <file>  interpret file and exit.
+  -l, --load <file>    interpret file.
 EOS
   exit 1
 }
@@ -495,6 +502,7 @@ function set-std () {
 
 function main () {
   local opt
+  local scripts=()
   for opt in "$@"; do
     case $opt in
       '-v' | '--version')
@@ -508,7 +516,12 @@ function main () {
         shift 2
         ;;
       '-S' | '--script')
-        script="$2"
+        script="true"
+        scripts+=("$(cat "$2" | sed -e '/^$/d')")
+        shift 2
+        ;;
+      '-l' | '--load')
+        pre_scripts+=("$(cat "$2" | sed -e '/^$/d')")
         shift 2
         ;;
     esac
@@ -519,18 +532,16 @@ function main () {
   fi
 
   if [ ! -z "$script" ]; then
-    cat "$script" | sed -e '/^$/d' -e '/^[#|!].*$/d' | main-loop
-#     compile-and-run
-    exit 0
-  fi
-  
+    echo "${scripts[*]}" | main-loop
+  else
 cat << EOS
 $prog $version with $gccversion
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
 
 EOS
-  main-loop
+    main-loop
+  fi
 }
 
 main "$@"
