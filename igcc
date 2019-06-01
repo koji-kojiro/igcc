@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
  
-readonly version="0.0.1"
+readonly version="0.0.2"
 readonly copy="(C) 2018 TANI Kojiro <kojiro0531@gmail.com>
 (C) 2019 Zaoqi <zaomir@outlook.com>"
 
@@ -475,7 +475,7 @@ Options:
   -v, --version                show version info and exit.
   -std <standard>              specify c dialect.
   -i, --interactive <boolean>  interactive or not. default: true
-  -r, --load <file>            interpret file.
+  -r, --require <file>         interpret file.
   -e, --eval <...>             evaluate script.
   -Pc <option>                 pass <option> to "$cc".
   -cc <compiler>               specify c compiler.
