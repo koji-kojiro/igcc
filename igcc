@@ -477,7 +477,7 @@ Options:
   -i, --interactive <boolean>  interactive or not. default: true
   -r, --require <file>         interpret file.
   -e, --eval <...>             evaluate script.
-  -Pc <option>                 pass <option> to "$cc".
+  -Pc <option>                 pass <option> to the c compiler.
   -cc <compiler>               specify c compiler.
 EOS
   exit 1
