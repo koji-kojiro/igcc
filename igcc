@@ -205,12 +205,12 @@ function compile-and-run () {
   local src="$(create-source)"
   if [ -z "$not_interactive" ]; then
     local output="$(\
-      echo "$src" | "$cc" "${args[@]}" -xc -o "$bin" -DPRINT \
+      echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" -DPRINT \
       -DCOUNT=$count "${libs[@]}" - 2>&1 || \
-      echo "$src" | "$cc" "${args[@]}" -xc -o "$bin" \
+      echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" \
       -DCOUNT=$count ${libs[@]} - 2>&1)"
   else
-    local output="$(echo "$src" | "$cc" "${args[@]}" -xc -o "$bin" -DSCRIPT "${libs[@]}" - 2>&1)"
+    local output="$(echo "$src" | "$cc" "${cmds[@]}" -xc -o "$bin" -DSCRIPT "${libs[@]}" - 2>&1)"
   fi
   if [ -x "$bin" ]; then
     if [ -z "$not_interactive" ]; then
@@ -284,8 +284,8 @@ function command-include () {
     print-success "(${headers[*]})"
   else
     if [ -z $(echo "${headers[@]}" | grep -o "$header") ]; then
-      if [ -z $(echo \#include \""$header"\" |\
-              "$cc" -xc - 2>&1 | grep -o "$header") ]; then
+      if [ -z "$(echo \#include \""$header"\" |\
+              "$cc" -xc - 2>&1 | grep -o "$header")" ]; then
         headers+=("$header")
         print-success "(${headers[*]})"
       else
