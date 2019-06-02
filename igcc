@@ -241,7 +241,9 @@ function command-help () {
     :edit               invoke ${EDITOR:-vi}.
     :exit               exit $prog.
     :help               show this help.
+    :include            show added header files.
     :include <header>   add header file.
+    :lib                show added shared libraries.
     :lib <library>      add shared library to be linked.
     :load <file>        restore enviroment from <file>.
     :save <file>        save current environment into <file>.      
@@ -567,7 +569,7 @@ function main () {
 cat << EOS
 $prog $version with $(ccversion)
 $copy
-try \`:help\` to get help. Ctrl-C to exit.
+try \`:help\` to get help. Ctrl-D to exit.
 
 EOS
   fi
