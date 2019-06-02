@@ -228,7 +228,7 @@ function compile-and-run () {
   if [ -x "$bin" ]; then
     if [ -z "$not_interactive" ]; then
       local result="$("$bin" 2>&1 || echo failed)"
-      if [ ! -z "$result" ]; then
+      if [ -n "$result" ]; then
         let count--
         lines=("${lines[@]:0:$count}")
         print-error "Segmentation fault."
@@ -580,9 +580,9 @@ function main () {
     esac
   done
 
-  [ ! -z "$*" ] && show-help-and-exit
+  [ -n "$*" ] && show-help-and-exit
 
-  [ ! -z "$std" ] && set-std "$std"
+  [ -n "$std" ] && set-std "$std"
 
   if [ -z "$not_interactive" ]; then
 cat << EOS
