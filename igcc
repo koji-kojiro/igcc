@@ -28,8 +28,11 @@ if type clang >/dev/null 2>/dev/null; then
 else
   cc=gcc
 fi
+CC(){
+  "$cc" "$@"
+}
 ccversion(){
-  "$cc" -v 2>&1 | grep version
+  CC -v 2>&1 | grep version
 }
 headers=(stdio.h)
 prog="$(basename $0)"
@@ -69,7 +72,7 @@ readonly comp_wordbreaks=("(" ")" ";" "{" "}")
 
 function tab-complete () {
   local words=("$READLINE_LINE")
-  if [ "$words" ]; then
+  if [ -n "$words" ]; then
     local slice=(${READLINE_LINE:0:$(($READLINE_POINT + 1))})
     local n=$((${#slice[@]} - 1))
 
@@ -156,7 +159,7 @@ int main (void)
 
 function print-error() {
   printf "\e[31mError:$1\e[m\n"
-  if [ "$not_interactive" ]; then
+  if [ -n "$not_interactive" ]; then
     exit 1
   fi
 }
@@ -205,12 +208,12 @@ function compile-and-run () {
   local src="$(create-source)"
   if [ -z "$not_interactive" ]; then
     local output="$(\
-      echo "$src" | "$cc" -xc -o "$bin" -DPRINT \
+      echo "$src" | CC -xc -o "$bin" -DPRINT \
       -DCOUNT=$count "${cmds[@]}" - 2>&1 || \
-      echo "$src" | "$cc" -xc -o "$bin" \
+      echo "$src" | CC -xc -o "$bin" \
       -DCOUNT=$count "${cmds[@]}" - 2>&1)"
   else
-    local output="$(echo "$src" | "$cc" -xc -o "$bin" -DSCRIPT "${cmds[@]}" - 2>&1)"
+    local output="$(echo "$src" | CC -xc -o "$bin" -DSCRIPT "${cmds[@]}" - 2>&1)"
   fi
   if [ -x "$bin" ]; then
     if [ -z "$not_interactive" ]; then
@@ -283,9 +286,9 @@ function command-include () {
   if [ -z "$header" ]; then
     print-success "(${headers[*]})"
   else
-    if [ -z $(echo "${headers[@]}" | grep -o "$header") ]; then
-      if [ -z "$(echo \#include \""$header"\" |\
-              "$cc" -xc "${cmds[@]}" - 2>&1 | grep -o "$header")" ]; then
+    if [ -z "$(echo "${headers[*]}" | grep -o "$header")" ]; then
+      if [ -n "$(echo \#include \""$header"\" |\
+              CC -xc "${cmds[@]}" - 2>&1 | grep -o main)" ]; then
         headers+=("$header")
         print-success "(${headers[*]})"
       else
@@ -303,7 +306,7 @@ function command-lib () {
     print-success "(${libs[*]})"
   else
     if [ -z "$(echo "${libs[@]}" | grep -o "$lib")" ]; then
-      if [ -z "$("$cc" "${cmds[@]}" -l$2 2>&1 | grep -o main)" ]; then
+      if [ -z "$(CC "${cmds[@]}" "-l$2" 2>&1 | grep -o main)" ]; then
         print-error "Could not find \`lib$lib.so\`."
       else
         libs+=("-l$lib")
@@ -364,7 +367,7 @@ function command-show () {
     IFS=$'\n'
     flag=true
     for line in $(echo "${lines[i]}" | eval "$indent" | eval "$highlight"); do
-      if $flag; then
+      if "$flag"; then
         printf "\e[34m%7s\e[m: " "\$$(($i + 1))"
         flag=false
       else
@@ -379,7 +382,7 @@ function command-show () {
 function validate-line () {
   local line="$(add-semicolon-if-needed "$*")"
   echo "void main() { "$line" }" |\
-    "$cc" -xc -w -fsyntax-only - 2>&1 |\
+    CC -xc -w -fsyntax-only - 2>&1 |\
     grep -E "error: expected declaration or statement at end of input" >/dev/null
   echo "$?" 
 }
@@ -411,17 +414,18 @@ function read-multiline () {
 
 function main-loop () {
   local line
+  local is_eof
   while true; do
     if [ "${#pre_scripts[@]}" != 0 ]; then
       line="${pre_scripts[*]}"
       pre_scripts=()
     else
-      read -er -p "$(prompt)" line
+      read -er -p "$(prompt)" line || is_eof=t
     fi
     history -s "$line"
-    if [ -z "$line" ]; then
+    if [ -n "$is_eof" ]; then
       if [ -z "$not_interactive" ]; then
-          :
+          exit 0
       else
         IFS= compile-and-run
         break
@@ -494,7 +498,7 @@ function set-std () {
     print-error "Missing argument."
     exit 1
   fi
-  if echo | "$cc" -std="$1" -fsyntax-only -xc - >/dev/null 2>&1; then
+  if echo | CC -std="$1" -fsyntax-only -xc - >/dev/null 2>&1; then
     cmds+=("-std=$1")
   else
     print-error "Unrecognized option: $1"
@@ -533,11 +537,11 @@ function main () {
         shift 2
         ;;
       '-r' | '--require')
-        pre_scripts+=("$(cat "$2" | sed -e '/^$/d')")
+        pre_scripts+=("$(cat "$2" | sed -e '/^#!/d')")
         shift 2
         ;;
       '-e' | '--eval')
-        pre_scripts+=("$(echo "$2" | sed -e '/^$/d')")
+        pre_scripts+=("$(echo "$2" | sed -e '/^#!/d')")
         shift 2
         ;;
       '-Pc')
