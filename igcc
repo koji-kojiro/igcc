@@ -25,9 +25,7 @@ libs=()
 lang='c'
 cmds=()
 for cc in gcc clang; do
-  if type "$cc" >/dev/null 2>/dev/null; then
-    break
-  fi
+  type "$cc" >/dev/null 2>/dev/null && break
 done
 CC(){
   LANG= "$cc" "$@"
@@ -68,9 +66,7 @@ function possible-completions () {
   local word
   
   for word in "${candidates[@]}"; do
-    if [ "${#word}" -gt "${#longest}" ]; then
-      longest="$word"
-    fi
+    [ "${#word}" -gt "${#longest}" ] && longest="$word"
   done
   local n=$((${#longest} + 5))
   local cols="$(tput cols)"
@@ -409,10 +405,7 @@ function read-multiline () {
   local prompt="$(prompt |\
     sed -e "s/[[:cntrl:]]\[[0-9]*m//g" -e "s/././g" | cut -b 2-) "
   
-  while true; do
-   if [ "$(validate-line "${buf[@]}")" -eq 1 ]; then
-      break
-    fi
+  while [ "$(validate-line "${buf[@]}")" -ne 1 ]; do
     if [ -z "$not_interactive" ]; then
       read -erp "$prompt" line
     else
@@ -440,12 +433,9 @@ function main-loop () {
     fi
     history -s "$line"
     if [ -n "$is_eof" ]; then
-      if [ -z "$not_interactive" ]; then
-          exit 0
-      else
-        IFS= compile-and-run
-        break
-      fi
+      [ -z "$not_interactive" ] && exit 0
+      IFS= compile-and-run
+      break
     elif [ "$line" = ":clear" ]; then
       command-clear
     elif [ "$line" = ":edit" ]; then
@@ -480,15 +470,11 @@ function main-loop () {
         local _IFS="$IFS"
         IFS= lines+=("$line")
         let count++
-        if [ -z "$not_interactive" ]; then
-          compile-and-run
-        fi
+        [ -z "$not_interactive" ] && compile-and-run
         IFS="$_IFS"
       fi
     fi
-    if [ -z "$not_interactive" ];then
-      echo
-    fi
+    [ -z "$not_interactive" ] && echo
   done
 }
 
@@ -540,7 +526,7 @@ function main () {
         show-help-and-exit
         ;;
       '-std')
-        set-std "$2"
+        std="$2"
         shift 2
         ;;
       '-i' | '--interactive')
@@ -584,14 +570,13 @@ function main () {
 
   [ -n "$std" ] && set-std "$std"
 
-  if [ -z "$not_interactive" ]; then
+  [ -z "$not_interactive" ] &&
 cat << EOS
 $prog $version with $(ccversion)
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
 
 EOS
-  fi
   main-loop
 }
 
