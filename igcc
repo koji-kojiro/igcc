@@ -485,9 +485,10 @@ Options:
   -h, --help                   show this help and exit.
   -v, --version                show version info and exit.
   -std <standard>              specify c dialect.
-  -i, --interactive <boolean>  interactive or not. default: true
+  -i, --interactive <boolean>  interactive or not. default: true when there is no "--eval" "--require", false in other cases
   -r, --require <file>         interpret file.
   -e, --eval <...>             evaluate script.
+  --read-stdin <boolean>       whether to read from standard input. default: same as interactive
   -Pc <option>                 pass <option> to the c compiler.
   -cc <compiler>               specify c compiler.
   -x <language>                specify the language. permissible languages include: c. default: c
@@ -513,10 +514,28 @@ function set-std () {
   fi
 }
 
+main_readbool_ret=""
+main_readbool(){
+  case "$1" in
+    'true' | 't' | '1')
+      main_readbool_ret=true
+      ;;
+    'false' | 'f' | '0')
+      main_readbool_ret=false
+      ;;
+    *)
+      show-help-and-exit
+      ;;
+  esac
+}
+
 function main () {
-  local opt
+  local opt=''
   local scripts=()
-  local std
+  local std=''
+  local interactive=''
+  local not_has_pre_scripts=true
+  local read_stdin=''
   for opt in "$@"; do
     case "$opt" in
       '-v' | '--version')
@@ -530,25 +549,18 @@ function main () {
         shift 2
         ;;
       '-i' | '--interactive')
-        case "$2" in
-	  'true' | 't' | '1')
-	    not_interactive=""
-	    ;;
-	  'false' | 'f' | '0')
-	    not_interactive="t"
-	    ;;
-	  *)
-	    show-help-and-exit
-	    ;;
-	esac
+        main_readbool "$2"
+        interactive="$main_readbool_ret"
         shift 2
         ;;
       '-r' | '--require')
         add-pre_scripts "$(cat "$2" | sed -e '/^#!/d')"
+        not_has_pre_scripts=false
         shift 2
         ;;
       '-e' | '--eval')
         add-pre_scripts "$(echo "$2" | sed -e '/^#!/d')"
+        not_has_pre_scripts=false
         shift 2
         ;;
       '-Pc')
@@ -563,21 +575,36 @@ function main () {
 	lang="$2"
 	shift 2
 	;;
+      '--read-stdin')
+        main_readbool "$2"
+        read_stdin="$main_readbool_ret"
+        shift 2
+	;;
     esac
   done
+
+  [ -z "$interactive" ] && interactive="$not_has_pre_scripts"
+  [ -z "$read_stdin" ] && read_stdin="$interactive"
+
+  not_interactive="t"
+  "$interactive" && not_interactive=""
 
   [ -n "$*" ] && show-help-and-exit
 
   [ -n "$std" ] && set-std "$std"
 
-  [ -z "$not_interactive" ] &&
+  "$interactive" &&
 cat << EOS
 $prog $version with $(ccversion)
 $copy
 try \`:help\` to get help. Ctrl-D to exit.
 
 EOS
-  main-loop
+  if "$read_stdin"; then
+    main-loop
+  else
+    echo | main-loop
+  fi
 }
 
 main "$@"
