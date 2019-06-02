@@ -38,6 +38,15 @@ headers=(stdio.h)
 prog="$(basename $0)"
 not_interactive=""
 pre_scripts=()
+add-pre_scripts(){
+  local t="$(mktemp)"
+  echo "$*" > "$t"
+  local line
+  while read line; do
+    pre_scripts+=("$line")
+  done < "$t"
+  rm "$t"
+}
 
 completion_candidates=(
   "auto" "break" "case" "char" "const"
@@ -220,7 +229,7 @@ function compile-and-run () {
       local result="$("$bin" 2>&1 || echo failed)"
       if [ ! -z "$result" ]; then
         let count--
-        lines=(${lines[@]:0:$count})
+        lines=("${lines[@]:0:$count}")
         print-error "Segmentation fault."
       fi
     else
@@ -228,7 +237,7 @@ function compile-and-run () {
     fi
   else
     let count--
-    lines=(${lines[@]:0:$count})
+    lines=("${lines[@]:0:$count}")
     print-success "$(echo "$output" | grep -E error: | sort -u)"
     print-error "Failed to compile."
   fi
@@ -277,7 +286,7 @@ function command-edit () {
   if [ -z "$content" ]; then
     print-error "Nothing to compile."
   else
-    lines+=("$(echo "$content")")
+    lines+=("$(echo $content)")
     let count++
     IFS= compile-and-run
   fi
@@ -340,11 +349,15 @@ function command-save () {
     print-error "Missing filename."
   else
     cat << EOS > "$file"
-lib=(${libs[@]})
-headers=(${headers[@]})
-std=$std
+$(if [ "${#libs[@]}" != 0 ]; then
+  echo "libs=($(printf "\"%q\" " "${libs[@]}"))"
+else
+  echo 'libs=()'
+fi)
+headers=($(printf "%q " "${headers[@]}"))
+std=$(printf "%q" "$std")
 lines=($(printf "%q " "${lines[@]}"))
-count=$count
+count=$(printf "%q" "$count")
 EOS
    print-success "Wrote into \`$file\`."
   fi
@@ -419,8 +432,8 @@ function main-loop () {
   local is_eof
   while true; do
     if [ "${#pre_scripts[@]}" != 0 ]; then
-      line="${pre_scripts[*]}"
-      pre_scripts=()
+      line="${pre_scripts[0]}"
+      pre_scripts=("${pre_scripts[@]:1}")
     else
       read -er -p "$(prompt)" line || is_eof=t
     fi
@@ -543,11 +556,11 @@ function main () {
         shift 2
         ;;
       '-r' | '--require')
-        pre_scripts+=("$(cat "$2" | sed -e '/^#!/d')")
+        add-pre_scripts "$(cat "$2" | sed -e '/^#!/d')"
         shift 2
         ;;
       '-e' | '--eval')
-        pre_scripts+=("$(echo "$2" | sed -e '/^#!/d')")
+        add-pre_scripts "$(echo "$2" | sed -e '/^#!/d')"
         shift 2
         ;;
       '-Pc')
