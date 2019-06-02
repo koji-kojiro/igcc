@@ -438,8 +438,12 @@ function main-loop () {
       exit 0
     elif [ "$line" = ":help" ]; then
       command-help
+    elif [ "$line" = ":include" ]; then
+      command-include
     elif [[ $line = :include\ * ]]; then
       command-include $line
+    elif [ "$line" = ":lib" ]; then
+      command-lib
     elif [[ $line = :lib\ * ]]; then
       command-lib $line
     elif [[ $line = :load\ * ]]; then
