@@ -36,7 +36,7 @@ ccversion(){
   CC -v 2>&1 | grep version
 }
 headers=(stdio.h)
-prog="$(basename $0)"
+prog="$(basename "$0")"
 not_interactive=""
 pre_scripts=()
 add-pre_scripts(){
